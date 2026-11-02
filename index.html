@@ -89,7 +89,7 @@
 <script>
 var FOUNDED = 1949;
 var CUR_YEARS = new Date().getFullYear() - FOUNDED;   // 当前朝代已存续年数
-var SPAN_MIN = 15, SPAN_MAX = 1060;                   // 假设国祚滚轮范围（15=秦，1060>拜占庭1058）
+var SPAN_MIN = 1, SPAN_MAX = 2000;                    // 假设国祚滚轮范围
 
 var state = {
   preQin: LGF.get('dt-preqin', '1') === '1',          // 包含秦以前的朝代（周）
@@ -203,14 +203,23 @@ function render() {
   }
   document.getElementById('chartCard').innerHTML = html;
 
-  // ---- 建国第 77 年对照（随「包含先秦」开关，不受隐藏开关影响）----
-  var a = '<div class="card-title">建国第 ' + CUR_YEARS + ' 年，各朝在做什么</div>';
+  // ---- 建国第 77 年对照（朝局 / 民间 / 稳定度）----
+  function stabDots(n) {
+    var color = n >= 4 ? 'var(--green)' : n === 3 ? 'var(--yellow)' : 'var(--red)';
+    var dots = '';
+    for (var i = 1; i <= 5; i++) dots += i <= n ? '●' : '○';
+    return '<span style="color:' + color + ';letter-spacing:2px">' + dots + '</span>';
+  }
+  var a = '<div class="card-title">建国第 ' + CUR_YEARS + ' 年 · 朝局与民间</div>';
   for (var j = 0; j < DYNASTIES.length; j++) {
     var dy = DYNASTIES[j];
     if (!state.preQin && dy.preQin) continue;
+    var s = dy.at77;
     a += '<div class="at77-row">' +
-      '<div class="at77-name">' + dy.name + '<span>建国 ' + (dy.start < 0 ? '前 ' + (-dy.start) : dy.start) + ' 年 · ' + dy.span + ' 年国祚</span></div>' +
-      '<div class="at77-text">' + dy.at77 + '</div>' +
+      '<div class="at77-name">' + dy.name + '<span>' + s.head + '</span></div>' +
+      '<div class="at77-text"><b style="color:var(--text);font-weight:600">朝局</b> · ' + s.court + '</div>' +
+      '<div class="at77-text"><b style="color:var(--text);font-weight:600">民间</b> · ' + s.folk + '</div>' +
+      '<div class="at77-text"><b style="color:var(--text);font-weight:600">稳定度</b> · ' + stabDots(s.stab) + ' ' + s.stabText + '</div>' +
     '</div>';
   }
   document.getElementById('at77Card').innerHTML = a;
