@@ -5,29 +5,43 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>朝代时期对比 · 人生可视化</title>
 <link rel="stylesheet" href="shared/theme.css">
+<link rel="stylesheet" href="shared/wheel.css">
 <style>
-  /* 拉链图：所有朝代起点对齐，宽度 = 国祚 */
-  .zip { padding: 18px; }
+  .chart-head { display: flex; align-items: center; justify-content: space-between; padding: 16px 18px 4px; }
+  .mini-seg { display: flex; background: var(--bg-fill); border-radius: 8px; padding: 2px; }
+  .mini-seg button {
+    border: none; background: transparent; color: var(--sub);
+    font-size: 12px; font-weight: 600; padding: 5px 14px; border-radius: 6px;
+    cursor: pointer; font-family: inherit; transition: all 0.15s;
+  }
+  .mini-seg button.on { background: var(--bg-elev); color: var(--text); box-shadow: 0 1px 4px rgba(0,0,0,0.4); }
+
+  .zip { padding: 14px 18px 18px; }
+  .zip-sec { font-size: 12px; font-weight: 600; color: var(--sub); margin: 14px 0 8px; letter-spacing: 1px; }
   .zip-row { display: flex; align-items: center; margin-bottom: 7px; }
-  .zip-name { width: 42px; font-size: 13px; font-weight: 600; flex-shrink: 0; }
+  .zip-name { width: 84px; font-size: 13px; font-weight: 600; flex-shrink: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .zip-track { flex: 1; height: 16px; background: var(--bg-fill); border-radius: 4px; position: relative; }
-  .zip-bar { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 4px; background: linear-gradient(90deg, #FF9F0A, #FF375F); }
-  .zip-years { margin-left: 8px; font-size: 11px; color: var(--sub); flex-shrink: 0; width: 52px; }
+  .zip-bar { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 4px; }
+  .bar-cn { background: linear-gradient(90deg, #FF9F0A, #FF375F); }
+  .bar-fn { background: linear-gradient(90deg, #5E5CE6, #64D2FF); }
+  .bar-cur { background: linear-gradient(90deg, #F5F5F7, #64D2FF); box-shadow: 0 0 8px rgba(100, 210, 255, 0.5); }
+  .zip-val { margin-left: 8px; font-size: 11px; color: var(--sub); flex-shrink: 0; width: 72px; text-align: right; font-variant-numeric: tabular-nums; }
   .zip-cursor { position: absolute; top: -4px; bottom: -4px; width: 2px; background: #fff; box-shadow: 0 0 6px rgba(255,255,255,0.9); }
-  .zip-note { font-size: 11px; color: var(--sub); text-align: center; margin-top: 10px; }
-  .zip-legend { display: flex; justify-content: space-between; font-size: 11px; color: var(--sub); padding: 0 18px 0 60px; margin-bottom: 8px; }
+  .zip-collapse {
+    margin: 6px 0; padding: 9px 12px; border-radius: 8px;
+    background: var(--bg-fill); color: var(--sub); font-size: 12px;
+    cursor: pointer; line-height: 1.7;
+  }
+  .zip-collapse:active { opacity: 0.7; }
+  .zip-cur-row .zip-name { color: var(--teal); }
+  .zip-note { font-size: 11px; color: var(--sub); text-align: center; margin-top: 12px; line-height: 1.7; }
+  .zip-over { color: var(--red); }
 
   .at77-row { padding: 12px 18px; border-top: 0.5px solid var(--sep); }
   .at77-row:first-child { border-top: none; }
   .at77-name { font-size: 15px; font-weight: 600; }
   .at77-name span { font-size: 12px; color: var(--sub); font-weight: 400; margin-left: 8px; }
   .at77-text { font-size: 13px; color: var(--sub); margin-top: 4px; line-height: 1.6; }
-
-  .wa-row { padding: 12px 18px; border-top: 0.5px solid var(--sep); }
-  .wa-row:first-child { border-top: none; }
-  .wa-year { font-size: 12px; color: var(--accent); font-weight: 700; }
-  .wa-cn { font-size: 14px; font-weight: 600; margin-top: 3px; }
-  .wa-world { font-size: 13px; color: var(--sub); margin-top: 3px; line-height: 1.6; }
 </style>
 </head>
 <body>
@@ -35,43 +49,140 @@
   <header class="tool-head">
     <a class="back" href="preview.html" target="_top">📱 手机预览版</a>
     <h1>朝代时期对比</h1>
-    <p class="sub">同样建国 77 年（1949-2026），各朝代都在忙什么——从时间轴上理解王朝更替</p>
+    <p class="sub" id="subTitle">同样建国 77 年，各朝代在忙什么——从时间轴上理解王朝更替</p>
   </header>
 
-  <section class="card"><div class="zip" id="zipBox"></div></section>
+  <section class="card" id="settingsCard"></section>
+  <section class="card" id="chartCard"></section>
   <section class="card" id="at77Card"></section>
-  <section class="card" id="worldCard"></section>
 
   <p class="hint" style="text-align:center">有人 77 岁在盛世，有人 77 岁在悬崖边。</p>
 </div>
 
+<div class="sheet-mask" id="sheetMask"></div>
+<div class="sheet" id="sheet">
+  <div class="grabber"></div>
+  <div class="sheet-toolbar">
+    <div class="sheet-title" id="sheetTitle">选择</div>
+    <button class="done-btn" id="sheetDone">完成</button>
+  </div>
+  <div class="wheel-wrap">
+    <div class="wheel-mask-top"></div>
+    <div class="wheel-mask-bottom"></div>
+    <div class="wheel-band"></div>
+    <div class="wheel-row" id="wheelRow"></div>
+  </div>
+</div>
+
 <script src="shared/core.js"></script>
+<script src="shared/wheel.js"></script>
 <script src="data/dynasties.js"></script>
 <script>
-var ANCHOR_YEARS = 77; // 1949 → 2026
+// ---- 基础数据 ----
+var FOUNDED = 1949;
+var NOW_Y = new Date().getFullYear();
+var CUR_YEARS = NOW_Y - FOUNDED;                      // 当前朝代已存续年数（77）
 
-function render() {
-  // ---- 拉链图 ----
-  var maxSpan = 405; // 两汉合计作为最大刻度
-  var rows = DYNASTIES.slice().sort(function (a, b) { return b.span - a.span; });
-  var html = '<div class="zip-legend"><span>建国年</span><span>国祚 →</span></div>';
-  for (var i = 0; i < rows.length; i++) {
-    var d = rows[i];
-    var pct = d.span / maxSpan * 100;
-    var cursorPct = Math.min(100, ANCHOR_YEARS / maxSpan * 100);
-    html += '<div class="zip-row">' +
-      '<span class="zip-name">' + d.name + '</span>' +
-      '<div class="zip-track"><div class="zip-bar" style="width:' + pct + '%"></div>' +
-        (d.span > ANCHOR_YEARS ? '<div class="zip-cursor" style="left:' + cursorPct + '%"></div>' : '') +
-      '</div>' +
-      '<span class="zip-years">' + d.span + ' 年</span>' +
-    '</div>';
+var CN = DYNASTIES.slice();
+var AVG = CN.reduce(function (s, d) { return s + d.span; }, 0) / CN.length;   // 平均国祚 161.1
+
+// 滚轮参照项：平均 + 中国朝代 + 外国朝代（按国祚降序）
+var WHEEL = [{ label: '平均 · ' + Math.round(AVG) + ' 年', span: AVG }]
+  .concat(CN.slice().sort(function (a, b) { return b.span - a.span; })
+    .map(function (d) { return { label: d.name + ' · ' + d.span + ' 年', span: d.span }; }))
+  .concat(FOREIGN_DYNASTIES.slice().sort(function (a, b) { return b.span - a.span; })
+    .map(function (d) { return { label: d.name + ' · ' + d.span + ' 年', span: d.span }; }));
+
+var state = {
+  anchorLabel: LGF.get('dt-anchor', WHEEL[0].label),   // 参照时长
+  mode: LGF.get('dt-mode', 'value') === 'pct' ? 'pct' : 'value',
+  expanded: false
+};
+function anchorSpan() {
+  for (var i = 0; i < WHEEL.length; i++) {
+    if (WHEEL[i].label === state.anchorLabel) return WHEEL[i].span;
   }
-  html += '<div class="zip-note">白色竖线 = 建国第 77 年 · 短于 77 年的朝代（秦 15、新 14、隋 38、西晋 51）没有竖线——它们没能走到这一年</div>';
-  document.getElementById('zipBox').innerHTML = html;
+  return AVG;
+}
 
-  // ---- 建国同期对比 ----
-  var a = '<div class="card-title">建国第 77 年，各朝在做什么</div>';
+function fmtPct(v) { return v.toFixed(1) + '%'; }
+
+// ---- 渲染 ----
+function render() {
+  LGF.set('dt-anchor', state.anchorLabel);
+  LGF.set('dt-mode', state.mode);
+
+  var anchor = anchorSpan();
+  var curPct = CUR_YEARS / anchor * 100;
+
+  // 统一数值刻度：全部（含外国与当前）里最长的国祚
+  var maxSpan = Math.max.apply(null, [CUR_YEARS].concat(
+    CN.map(function (d) { return d.span; }),
+    FOREIGN_DYNASTIES.map(function (d) { return d.span; })));
+
+  document.getElementById('subTitle').textContent =
+    '当前已建国 ' + CUR_YEARS + ' 年——各朝代在忙什么，占各朝国祚百分之几';
+
+  // 设置卡：参照时长滚轮 + 当前朝代进度
+  document.getElementById('settingsCard').innerHTML =
+    '<div class="row clickable" id="anchorRow"><span class="label">参照时长（滚轮）</span>' +
+      '<span class="value">' + state.anchorLabel + '<span class="chevron">›</span></span></div>' +
+    '<div class="stat-cap" style="padding-top:14px">当前朝代（新中国）已存续</div>' +
+    '<div class="stat-big">' + CUR_YEARS + '<span class="stat-unit">年</span></div>' +
+    '<div class="progress-track"><div class="progress-fill" style="width:' + Math.min(100, curPct) + '%"></div></div>' +
+    '<div class="stat-cells">' +
+      '<div class="stat-cell"><div class="num">' + fmtPct(curPct) + '</div><div class="cap">占参照时长比例</div></div>' +
+      '<div class="stat-cell"><div class="num">' + Math.round(anchor) + ' 年</div><div class="cap">当前参照</div></div>' +
+      '<div class="stat-cell"><div class="num">' + Math.round(AVG) + ' 年</div><div class="cap">中国朝代平均国祚</div></div>' +
+    '</div>' +
+    '<div class="stat-foot">换个参照试试：选「唐 · 289 年」就是 ' + fmtPct(CUR_YEARS / 289 * 100) +
+      '，选「元 · 97 年」就是 ' + fmtPct(CUR_YEARS / 97 * 100) + '</div>';
+
+  // ---- 拉链图 ----
+  var hidden = CN.filter(function (d) { return d.span < CUR_YEARS; });
+  var visibleCN = CN.filter(function (d) { return d.span >= CUR_YEARS; })
+    .sort(function (a, b) { return b.span - a.span; });
+  var fnAll = FOREIGN_DYNASTIES.slice().sort(function (a, b) { return b.span - a.span; });
+  var hiddenFn = fnAll.filter(function (d) { return d.span < CUR_YEARS; });
+  var visibleFn = fnAll.filter(function (d) { return d.span >= CUR_YEARS; });
+  var anyHidden = hidden.length + hiddenFn.length > 0;
+
+  var html = '<div class="chart-head"><div class="card-title" style="padding:0">王朝时长图</div>' +
+    '<div class="mini-seg" id="modeSeg">' +
+      '<button data-m="value"' + (state.mode === 'value' ? ' class="on"' : '') + '>数值</button>' +
+      '<button data-m="pct"' + (state.mode === 'pct' ? ' class="on"' : '') + '>百分比</button>' +
+    '</div></div><div class="zip">';
+
+  html += '<div class="zip-sec">中国朝代</div>';
+  html += rowsHTML(visibleCN, 'cn', maxSpan);
+  if (!state.expanded && anyHidden) {
+    var names = hidden.concat(hiddenFn).sort(function (a, b) { return b.span - a.span; })
+      .map(function (d) { return d.name + ' ' + d.span; }).join(' · ');
+    html += '<div class="zip-collapse" id="collapseRow">▸ 已隐藏 ' + (hidden.length + hiddenFn.length) +
+      ' 个短于 ' + CUR_YEARS + ' 年的王朝：' + names + '（点击展开）</div>';
+  } else if (state.expanded) {
+    html += rowsHTML(hidden.sort(function (a, b) { return b.span - a.span; }), 'cn', maxSpan);
+    if (anyHidden) html += '<div class="zip-collapse" id="collapseRow">▾ 收起短王朝</div>';
+  }
+
+  // 当前朝代（高亮居中）
+  html += '<div class="zip-sec">当前朝代</div>';
+  html += rowHTML({ name: '新中国', span: CUR_YEARS, cur: true }, 'cur', maxSpan);
+
+  html += '<div class="zip-sec">外国朝代</div>';
+  html += rowsHTML(visibleFn, 'fn', maxSpan);
+  if (state.expanded && hiddenFn.length) {
+    html += rowsHTML(hiddenFn, 'fn', maxSpan);
+  }
+
+  html += '<div class="zip-note">' + (state.mode === 'value'
+    ? '条长 = 国祚数值 · 白色竖线 = 建国第 ' + CUR_YEARS + ' 年 · 短于 ' + CUR_YEARS + ' 年的王朝默认隐藏'
+    : '条长 = 当前 ' + CUR_YEARS + ' 年占该朝国祚的百分比 · 参照「' + state.anchorLabel + '」时当前朝代为 ' + fmtPct(curPct)) +
+    '</div></div>';
+  document.getElementById('chartCard').innerHTML = html;
+
+  // ---- 建国第 77 年对照 ----
+  var a = '<div class="card-title">建国第 ' + CUR_YEARS + ' 年，各朝在做什么</div>';
   for (var j = 0; j < DYNASTIES.length; j++) {
     var dy = DYNASTIES[j];
     a += '<div class="at77-row">' +
@@ -81,19 +192,56 @@ function render() {
   }
   document.getElementById('at77Card').innerHTML = a;
 
-  // ---- 中外同轴 ----
-  var w = '<div class="card-title">中外同轴对照</div>';
-  for (var k = 0; k < WORLD_ANCHORS.length; k++) {
-    var wa = WORLD_ANCHORS[k];
-    w += '<div class="wa-row">' +
-      '<div class="wa-year">' + wa.year + '</div>' +
-      '<div class="wa-cn">🇨🇳 ' + wa.cn + '</div>' +
-      '<div class="wa-world">🌍 ' + wa.world + '</div>' +
-    '</div>';
-  }
-  document.getElementById('worldCard').innerHTML = w;
+  // ---- 事件 ----
+  document.getElementById('anchorRow').addEventListener('click', function () {
+    var idx = 0;
+    for (var i = 0; i < WHEEL.length; i++) if (WHEEL[i].label === state.anchorLabel) { idx = i; break; }
+    WheelUI.open('参照时长',
+      [{ items: WHEEL.map(function (w) { return w.label; }), index: idx }],
+      function (sel) { state.anchorLabel = WHEEL[sel[0]].label; render(); },
+      function (sel) {
+        var el = document.querySelector('#anchorRow .value');
+        if (el) el.innerHTML = WHEEL[sel[0]].label + '<span class="chevron">›</span>';
+      }, render);
+  });
+  Array.prototype.forEach.call(document.querySelectorAll('#modeSeg button'), function (b) {
+    b.addEventListener('click', function () { state.mode = this.getAttribute('data-m'); render(); });
+  });
+  var cr = document.getElementById('collapseRow');
+  if (cr) cr.addEventListener('click', function () { state.expanded = !state.expanded; render(); });
 }
 
+// 数值/百分比两种模式的一组行
+function rowsHTML(list, kind, maxSpan) {
+  var h = '';
+  for (var i = 0; i < list.length; i++) h += rowHTML(list[i], kind, maxSpan);
+  return h;
+}
+
+function rowHTML(d, kind, maxSpan) {
+  var barCls = kind === 'cur' ? 'bar-cur' : kind === 'fn' ? 'bar-fn' : 'bar-cn';
+  var width, val, over = '';
+  if (state.mode === 'value') {
+    width = d.span / maxSpan * 100;
+    val = d.span + ' 年';
+  } else {
+    // 当前朝代的分母是滚轮参照时长，其余朝代的分母是各自国祚
+    var pct = d.cur ? CUR_YEARS / anchorSpan() * 100 : CUR_YEARS / d.span * 100;
+    if (pct > 100) { over = ' zip-over'; }
+    width = Math.min(100, pct);
+    val = pct >= 1000 ? Math.round(pct) + '%' : pct.toFixed(0) + '%';
+  }
+  var cursor = (state.mode === 'value' && d.span >= CUR_YEARS && !d.cur)
+    ? '<div class="zip-cursor" style="left:' + Math.min(100, CUR_YEARS / maxSpan * 100) + '%"></div>' : '';
+  var nameCls = kind === 'cur' ? ' zip-cur-row' : '';
+  return '<div class="zip-row' + nameCls + '">' +
+    '<span class="zip-name">' + (d.cur ? '🇨🇳 ' : '') + d.name + '</span>' +
+    '<div class="zip-track"><div class="zip-bar ' + barCls + '" style="width:' + width + '%"></div>' + cursor + '</div>' +
+    '<span class="zip-val' + over + '">' + val + '</span>' +
+  '</div>';
+}
+
+WheelUI.init();
 render();
 </script>
 </body>
