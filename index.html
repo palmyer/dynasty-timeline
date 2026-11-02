@@ -92,7 +92,7 @@ var CUR_YEARS = new Date().getFullYear() - FOUNDED;   // 当前朝代已存续�
 
 var state = {
   preQin: LGF.get('dt-preqin', '1') === '1',          // 包含秦以前的朝代（周）
-  hideShort: LGF.get('dt-hideshort', '1') === '1',    // 隐藏短于当前的朝代
+  showShort: LGF.get('dt-showshort', '0') === '1',    // 显示短于当前的朝代（默认隐藏）
   mode: LGF.get('dt-mode', 'value') === 'pct' ? 'pct' : 'value',
   anchorLabel: ''
 };
@@ -140,7 +140,7 @@ function eventAt(d, pct) {
 
 function render() {
   LGF.set('dt-preqin', state.preQin ? '1' : '0');
-  LGF.set('dt-hideshort', state.hideShort ? '1' : '0');
+  LGF.set('dt-showshort', state.showShort ? '1' : '0');
   LGF.set('dt-mode', state.mode);
   LGF.set('dt-anchor', state.anchorLabel);
 
@@ -153,7 +153,7 @@ function render() {
   var curPct = CUR_YEARS / anchor * 100;
   var pct = curPct / 100;
 
-  var kept = function (d) { return !state.hideShort || d.span >= CUR_YEARS; };
+  var kept = function (d) { return state.showShort || d.span >= CUR_YEARS; };
   var visibleCN = cnList().filter(kept).sort(function (a, b) { return b.span - a.span; });
   var visibleFN = FOREIGN_DYNASTIES.filter(kept).sort(function (a, b) { return b.span - a.span; });
 
@@ -168,8 +168,8 @@ function render() {
     '<div class="row"><span class="label">包含秦以前的朝代</span>' +
       '<div class="switch-wrap"><input type="checkbox" id="preQinSwitch"' + (state.preQin ? ' checked' : '') + '><div class="switch-track"></div></div></div>' +
     '<div class="separator"></div>' +
-    '<div class="row"><span class="label">隐藏短于 ' + CUR_YEARS + ' 年的朝代</span>' +
-      '<div class="switch-wrap"><input type="checkbox" id="hideShortSwitch"' + (state.hideShort ? ' checked' : '') + '><div class="switch-track"></div></div></div>' +
+    '<div class="row"><span class="label">显示短于 ' + CUR_YEARS + ' 年的朝代</span>' +
+      '<div class="switch-wrap"><input type="checkbox" id="showShortSwitch"' + (state.showShort ? ' checked' : '') + '><div class="switch-track"></div></div></div>' +
     '<div class="stat-cap" style="padding-top:14px">当前朝代（新中国）已存续</div>' +
     '<div class="stat-big">' + CUR_YEARS + '<span class="stat-unit">年</span></div>' +
     '<div class="progress-track"><div class="progress-fill" style="width:' + Math.min(100, curPct) + '%"></div></div>' +
@@ -201,7 +201,7 @@ function render() {
     html += '<div class="zip-sec">外国朝代</div>';
     html += visibleFN.map(function (d) { return zipRow(d, 'fn', maxSpan, false); }).join('');
     html += '<div class="zip-note">条长 = 国祚数值 · 白色竖线 = 建国第 ' + CUR_YEARS + ' 年' +
-      (state.hideShort ? ' · 短于 ' + CUR_YEARS + ' 年的王朝已按开关隐藏' : '') + '</div></div>';
+      (state.showShort ? '' : ' · 短于 ' + CUR_YEARS + ' 年的王朝默认隐藏（开关可显示）') + '</div></div>';
   } else {
     html += '<div class="zip-sec" style="padding:14px 18px 0">中国朝代</div>';
     html += visibleCN.map(function (d) { return evRow(d, pct, false); }).join('');
@@ -247,8 +247,8 @@ function render() {
     state.preQin = e.target.checked;
     render();
   });
-  document.getElementById('hideShortSwitch').addEventListener('change', function (e) {
-    state.hideShort = e.target.checked;
+  document.getElementById('showShortSwitch').addEventListener('change', function (e) {
+    state.showShort = e.target.checked;
     render();
   });
   Array.prototype.forEach.call(document.querySelectorAll('#modeSeg button'), function (b) {
