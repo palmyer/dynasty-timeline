@@ -223,12 +223,24 @@ function render() {
     for (var i = 1; i <= 5; i++) dots += i <= n ? '●' : '○';
     return '<span style="color:' + color + ';letter-spacing:2px">' + dots + '</span>';
   }
+  // 民负刻度：越重越红（与稳定度颜色语义相反）
+  function burdenDots(n) {
+    var color = n >= 4 ? 'var(--red)' : n === 3 ? 'var(--yellow)' : 'var(--green)';
+    var word = ['', '轻', '偏轻', '中等', '偏重', '极重'][n];
+    var dots = '';
+    for (var i = 1; i <= 5; i++) dots += i <= n ? '●' : '○';
+    return '<span style="color:' + color + ';letter-spacing:2px">' + dots + '</span> ' + word + ' —— ';
+  }
   function at77Row(dy) {
     var s = dy.at77;
+    var burdenLine = s.burden
+      ? '<div class="at77-text"><b style="color:var(--text);font-weight:600">民负</b> · ' + burdenDots(s.burden.level) + s.burden.text + '</div>'
+      : '';
     return '<div class="at77-row">' +
       '<div class="at77-name">' + dy.name + '<span>' + s.head + '</span></div>' +
       '<div class="at77-text"><b style="color:var(--text);font-weight:600">朝局</b> · ' + s.court + '</div>' +
       '<div class="at77-text"><b style="color:var(--text);font-weight:600">民间</b> · ' + s.folk + '</div>' +
+      burdenLine +
       '<div class="at77-text"><b style="color:var(--text);font-weight:600">稳定度</b> · ' + stabDots(s.stab) + ' ' + s.stabText + '</div>' +
     '</div>';
   }
