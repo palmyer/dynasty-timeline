@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>朝代时期对比 · 人生可视化</title>
+<link rel="stylesheet" href="shared/theme.css">
+<style>
+  /* 拉链图：所有朝代起点对齐，宽度 = 国祚 */
+  .zip { padding: 18px; }
+  .zip-row { display: flex; align-items: center; margin-bottom: 7px; }
+  .zip-name { width: 42px; font-size: 13px; font-weight: 600; flex-shrink: 0; }
+  .zip-track { flex: 1; height: 16px; background: var(--bg-fill); border-radius: 4px; position: relative; }
+  .zip-bar { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 4px; background: linear-gradient(90deg, #FF9F0A, #FF375F); }
+  .zip-years { margin-left: 8px; font-size: 11px; color: var(--sub); flex-shrink: 0; width: 52px; }
+  .zip-cursor { position: absolute; top: -4px; bottom: -4px; width: 2px; background: #fff; box-shadow: 0 0 6px rgba(255,255,255,0.9); }
+  .zip-note { font-size: 11px; color: var(--sub); text-align: center; margin-top: 10px; }
+  .zip-legend { display: flex; justify-content: space-between; font-size: 11px; color: var(--sub); padding: 0 18px 0 60px; margin-bottom: 8px; }
+
+  .at77-row { padding: 12px 18px; border-top: 0.5px solid var(--sep); }
+  .at77-row:first-child { border-top: none; }
+  .at77-name { font-size: 15px; font-weight: 600; }
+  .at77-name span { font-size: 12px; color: var(--sub); font-weight: 400; margin-left: 8px; }
+  .at77-text { font-size: 13px; color: var(--sub); margin-top: 4px; line-height: 1.6; }
+
+  .wa-row { padding: 12px 18px; border-top: 0.5px solid var(--sep); }
+  .wa-row:first-child { border-top: none; }
+  .wa-year { font-size: 12px; color: var(--accent); font-weight: 700; }
+  .wa-cn { font-size: 14px; font-weight: 600; margin-top: 3px; }
+  .wa-world { font-size: 13px; color: var(--sub); margin-top: 3px; line-height: 1.6; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="tool-head">
+    <a class="back" href="preview.html" target="_top">📱 手机预览版</a>
+    <h1>朝代时期对比</h1>
+    <p class="sub">同样建国 77 年（1949-2026），各朝代都在忙什么——从时间轴上理解王朝更替</p>
+  </header>
+
+  <section class="card"><div class="zip" id="zipBox"></div></section>
+  <section class="card" id="at77Card"></section>
+  <section class="card" id="worldCard"></section>
+
+  <p class="hint" style="text-align:center">有人 77 岁在盛世，有人 77 岁在悬崖边。</p>
+</div>
+
+<script src="shared/core.js"></script>
+<script src="data/dynasties.js"></script>
+<script>
+var ANCHOR_YEARS = 77; // 1949 → 2026
+
+function render() {
+  // ---- 拉链图 ----
+  var maxSpan = 405; // 两汉合计作为最大刻度
+  var rows = DYNASTIES.slice().sort(function (a, b) { return b.span - a.span; });
+  var html = '<div class="zip-legend"><span>建国年</span><span>国祚 →</span></div>';
+  for (var i = 0; i < rows.length; i++) {
+    var d = rows[i];
+    var pct = d.span / maxSpan * 100;
+    var cursorPct = Math.min(100, ANCHOR_YEARS / maxSpan * 100);
+    html += '<div class="zip-row">' +
+      '<span class="zip-name">' + d.name + '</span>' +
+      '<div class="zip-track"><div class="zip-bar" style="width:' + pct + '%"></div>' +
+        (d.span > ANCHOR_YEARS ? '<div class="zip-cursor" style="left:' + cursorPct + '%"></div>' : '') +
+      '</div>' +
+      '<span class="zip-years">' + d.span + ' 年</span>' +
+    '</div>';
+  }
+  html += '<div class="zip-note">白色竖线 = 建国第 77 年 · 短于 77 年的朝代（秦 15、新 14、隋 38、西晋 51）没有竖线——它们没能走到这一年</div>';
+  document.getElementById('zipBox').innerHTML = html;
+
+  // ---- 建国同期对比 ----
+  var a = '<div class="card-title">建国第 77 年，各朝在做什么</div>';
+  for (var j = 0; j < DYNASTIES.length; j++) {
+    var dy = DYNASTIES[j];
+    a += '<div class="at77-row">' +
+      '<div class="at77-name">' + dy.name + '<span>建国 ' + (dy.start < 0 ? '前 ' + (-dy.start) : dy.start) + ' 年 · ' + dy.span + ' 年国祚</span></div>' +
+      '<div class="at77-text">' + dy.at77 + '</div>' +
+    '</div>';
+  }
+  document.getElementById('at77Card').innerHTML = a;
+
+  // ---- 中外同轴 ----
+  var w = '<div class="card-title">中外同轴对照</div>';
+  for (var k = 0; k < WORLD_ANCHORS.length; k++) {
+    var wa = WORLD_ANCHORS[k];
+    w += '<div class="wa-row">' +
+      '<div class="wa-year">' + wa.year + '</div>' +
+      '<div class="wa-cn">🇨🇳 ' + wa.cn + '</div>' +
+      '<div class="wa-world">🌍 ' + wa.world + '</div>' +
+    '</div>';
+  }
+  document.getElementById('worldCard').innerHTML = w;
+}
+
+render();
+</script>
+</body>
+</html>
