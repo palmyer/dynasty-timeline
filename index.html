@@ -56,6 +56,14 @@
   <section class="card" id="chartCard"></section>
   <section class="card" id="at77Card"></section>
 
+  <p class="hint" style="line-height:2">
+    <b>口径说明</b>——<br>
+    · 周 790 年 = 前 1046 ～前 256（西周+东周），「八百年」为概称；分封制下东周王室多为名义共主<br>
+    · 汉因新朝（9–23）整体中断而分东西：西汉 210 / 东汉 195，刘秀重建、迁都洛阳<br>
+    · 宋法统连续（赵构为徽宗之子），两宋合计 319；按实控北方口径拆开为北宋 167 / 南宋 152<br>
+    · 夏、商年代为约数（断代工程推定），未列入本表；平均国祚含周，共 12 朝
+  </p>
+
   <p class="hint" style="text-align:center">有人 77 岁在盛世，有人 77 岁在悬崖边。</p>
 </div>
 
@@ -93,8 +101,10 @@ var WHEEL = [{ label: '平均 · ' + Math.round(AVG) + ' 年', span: AVG }]
   .concat(FOREIGN_DYNASTIES.slice().sort(function (a, b) { return b.span - a.span; })
     .map(function (d) { return { label: d.name + ' · ' + d.span + ' 年', span: d.span }; }));
 
+// 存储的参照标签若已不在滚轮列表（如数据更新导致），回退到默认
+var savedAnchor = LGF.get('dt-anchor', WHEEL[0].label);
 var state = {
-  anchorLabel: LGF.get('dt-anchor', WHEEL[0].label),   // 参照时长
+  anchorLabel: WHEEL.some(function (w) { return w.label === savedAnchor; }) ? savedAnchor : WHEEL[0].label,
   mode: LGF.get('dt-mode', 'value') === 'pct' ? 'pct' : 'value',
   expanded: false
 };
