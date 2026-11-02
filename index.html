@@ -46,6 +46,7 @@
   .at77-name { font-size: 15px; font-weight: 600; }
   .at77-name span { font-size: 12px; color: var(--sub); font-weight: 400; margin-left: 8px; }
   .at77-text { font-size: 13px; color: var(--sub); margin-top: 4px; line-height: 1.6; }
+  #at77Card .zip-sec { padding: 14px 18px 6px; margin: 0; border-top: 0.5px solid var(--sep); }
 
   .footnote {
     font-size: 11px; color: var(--dim); line-height: 2;
@@ -215,24 +216,29 @@ function render() {
   }
   document.getElementById('chartCard').innerHTML = html;
 
-  // ---- 建国第 77 年对照（朝局 / 民间 / 稳定度）----
+  // ---- 建国第 77 年对照（统一受三个开关控制）----
   function stabDots(n) {
     var color = n >= 4 ? 'var(--green)' : n === 3 ? 'var(--yellow)' : 'var(--red)';
     var dots = '';
     for (var i = 1; i <= 5; i++) dots += i <= n ? '●' : '○';
     return '<span style="color:' + color + ';letter-spacing:2px">' + dots + '</span>';
   }
-  var a = '<div class="card-title">建国第 ' + CUR_YEARS + ' 年 · 朝局与民间</div>';
-  for (var j = 0; j < DYNASTIES.length; j++) {
-    var dy = DYNASTIES[j];
-    if (!state.showPreQin && dy.preQin) continue;
+  function at77Row(dy) {
     var s = dy.at77;
-    a += '<div class="at77-row">' +
+    return '<div class="at77-row">' +
       '<div class="at77-name">' + dy.name + '<span>' + s.head + '</span></div>' +
       '<div class="at77-text"><b style="color:var(--text);font-weight:600">朝局</b> · ' + s.court + '</div>' +
       '<div class="at77-text"><b style="color:var(--text);font-weight:600">民间</b> · ' + s.folk + '</div>' +
       '<div class="at77-text"><b style="color:var(--text);font-weight:600">稳定度</b> · ' + stabDots(s.stab) + ' ' + s.stabText + '</div>' +
     '</div>';
+  }
+  var a = '<div class="card-title">建国第 ' + CUR_YEARS + ' 年 · 朝局与民间</div>';
+  var at77CN = cnList().filter(kept);
+  for (var j = 0; j < at77CN.length; j++) a += at77Row(at77CN[j]);
+  if (state.showForeign) {
+    a += '<div class="zip-sec">外国朝代</div>';
+    var at77FN = FOREIGN_DYNASTIES.filter(kept);
+    for (var k = 0; k < at77FN.length; k++) a += at77Row(at77FN[k]);
   }
   document.getElementById('at77Card').innerHTML = a;
 
@@ -241,7 +247,8 @@ function render() {
     '口径：周 790 年＝前 1046～前 256（西周+东周），「八百年」为概称，分封制下东周王室多为名义共主 · ' +
     '汉因新朝（9–23）整体中断而分东西（西汉 210 / 东汉 195，刘秀重建、迁都洛阳）· ' +
     '宋法统连续（赵构为徽宗之子）两宋合计 319，按实控北方口径拆开为北宋 167 / 南宋 152 · ' +
-    '夏商年代为约数未列入 · 平均国祚按当前显示口径的中国朝代计算（打开「显示秦以前」后含周）';
+    '夏商年代为约数未列入 · 平均国祚按当前显示口径的中国朝代计算（打开「显示秦以前」后含周）' +
+    ' · 三个开关同样作用于「建国第 ' + CUR_YEARS + ' 年」卡片';
 
   // ---- 事件 ----
   document.getElementById('anchorRow').addEventListener('click', function () {
