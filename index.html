@@ -89,15 +89,16 @@
 <script>
 var FOUNDED = 1949;
 var CUR_YEARS = new Date().getFullYear() - FOUNDED;   // 当前朝代已存续年数
+var SPAN_MIN = 15, SPAN_MAX = 1060;                   // 假设国祚滚轮范围（15=秦，1060>拜占庭1058）
 
 var state = {
   preQin: LGF.get('dt-preqin', '1') === '1',          // 包含秦以前的朝代（周）
   showShort: LGF.get('dt-showshort', '0') === '1',    // 显示短于当前的朝代（默认隐藏）
   mode: LGF.get('dt-mode', 'value') === 'pct' ? 'pct' : 'value',
-  anchorLabel: ''
+  anchorSpan: 0                                        // 假设国祚（年）
 };
 
-// 当前口径下的中国朝代列表（含/不含先秦）与滚轮参照项
+// 当前口径下的中国朝代列表（含/不含先秦）
 function cnList() {
   return DYNASTIES.filter(function (d) { return state.preQin || !d.preQin; });
 }
@@ -105,25 +106,19 @@ function avgSpan() {
   var l = cnList();
   return l.reduce(function (s, d) { return s + d.span; }, 0) / l.length;
 }
-function buildWheel() {
-  return [{ label: '平均 · ' + Math.round(avgSpan()) + ' 年', span: avgSpan() }]
-    .concat(cnList().slice().sort(function (a, b) { return b.span - a.span; })
-      .map(function (d) { return { label: d.name + ' · ' + d.span + ' 年', span: d.span }; }))
-    .concat(FOREIGN_DYNASTIES.slice().sort(function (a, b) { return b.span - a.span; })
-      .map(function (d) { return { label: d.name + ' · ' + d.span + ' 年', span: d.span }; }));
-}
-var WHEEL = buildWheel();
 
-// 存储的参照标签若不在当前滚轮列表（开关切换/数据更新导致），回退默认
-var savedAnchor = LGF.get('dt-anchor', WHEEL[0].label);
-state.anchorLabel = WHEEL.some(function (w) { return w.label === savedAnchor; }) ? savedAnchor : WHEEL[0].label;
-
-function anchorSpan() {
-  for (var i = 0; i < WHEEL.length; i++) {
-    if (WHEEL[i].label === state.anchorLabel) return WHEEL[i].span;
-  }
-  return avgSpan();
+// 国祚数字 -> 朝代名标注（数字正好等于某朝国祚时显示）
+function spanLabel(v) {
+  var tag = null;
+  cnList().concat(FOREIGN_DYNASTIES).forEach(function (d) {
+    if (d.span === v) tag = tag ? tag + '·' + d.name : d.name;
+  });
+  if (!tag && v === Math.round(avgSpan())) tag = '平均';
+  return v + ' 年' + (tag ? '（' + tag + '）' : '');
 }
+
+state.anchorSpan = Math.max(SPAN_MIN, Math.min(SPAN_MAX,
+  parseInt(LGF.get('dt-span', ''), 10) || Math.round(avgSpan())));
 function yearText(y) {
   return y < 0 ? '前 ' + (-y) + ' 年' : '公元 ' + y + ' 年';
 }
@@ -142,15 +137,11 @@ function render() {
   LGF.set('dt-preqin', state.preQin ? '1' : '0');
   LGF.set('dt-showshort', state.showShort ? '1' : '0');
   LGF.set('dt-mode', state.mode);
-  LGF.set('dt-anchor', state.anchorLabel);
+  LGF.set('dt-span', String(state.anchorSpan));
 
-  WHEEL = buildWheel();
-  if (!WHEEL.some(function (w) { return w.label === state.anchorLabel; })) {
-    state.anchorLabel = WHEEL[0].label;
-  }
+  state.anchorSpan = Math.max(SPAN_MIN, Math.min(SPAN_MAX, state.anchorSpan));
 
-  var anchor = anchorSpan();
-  var curPct = CUR_YEARS / anchor * 100;
+  var curPct = CUR_YEARS / state.anchorSpan * 100;
   var pct = curPct / 100;
 
   var kept = function (d) { return state.showShort || d.span >= CUR_YEARS; };
@@ -158,12 +149,12 @@ function render() {
   var visibleFN = FOREIGN_DYNASTIES.filter(kept).sort(function (a, b) { return b.span - a.span; });
 
   document.getElementById('subTitle').textContent =
-    '当前已建国 ' + CUR_YEARS + ' 年（占参照 ' + curPct.toFixed(1) + '%）——各朝代处在同一阶段时，发生了什么';
+    '当前已建国 ' + CUR_YEARS + ' 年（占假设国祚 ' + curPct.toFixed(1) + '%）——各朝代处在同一阶段时，发生了什么';
 
   // ---- 设置卡 ----
   document.getElementById('settingsCard').innerHTML =
-    '<div class="row clickable" id="anchorRow"><span class="label">参照时长（滚轮）</span>' +
-      '<span class="value">' + state.anchorLabel + '<span class="chevron">›</span></span></div>' +
+    '<div class="row clickable" id="anchorRow"><span class="label">假设国祚</span>' +
+      '<span class="value">' + spanLabel(state.anchorSpan) + '<span class="chevron">›</span></span></div>' +
     '<div class="separator"></div>' +
     '<div class="row"><span class="label">包含秦以前的朝代</span>' +
       '<div class="switch-wrap"><input type="checkbox" id="preQinSwitch"' + (state.preQin ? ' checked' : '') + '><div class="switch-track"></div></div></div>' +
@@ -174,12 +165,12 @@ function render() {
     '<div class="stat-big">' + CUR_YEARS + '<span class="stat-unit">年</span></div>' +
     '<div class="progress-track"><div class="progress-fill" style="width:' + Math.min(100, curPct) + '%"></div></div>' +
     '<div class="stat-cells">' +
-      '<div class="stat-cell"><div class="num">' + curPct.toFixed(1) + '%</div><div class="cap">占参照时长比例</div></div>' +
-      '<div class="stat-cell"><div class="num">' + Math.round(anchor) + ' 年</div><div class="cap">当前参照</div></div>' +
+      '<div class="stat-cell"><div class="num">' + curPct.toFixed(1) + '%</div><div class="cap">占假设国祚比例</div></div>' +
+      '<div class="stat-cell"><div class="num">' + state.anchorSpan + ' 年</div><div class="cap">假设国祚</div></div>' +
       '<div class="stat-cell"><div class="num">' + Math.round(avgSpan()) + ' 年</div><div class="cap">平均国祚（' + cnList().length + ' 朝）</div></div>' +
     '</div>' +
-    '<div class="stat-foot">「各朝同阶段」模式：每个朝代走到自己国祚的 ' + curPct.toFixed(1) +
-      '% 处，正赶上什么事</div>';
+    '<div class="stat-foot">滚到正好等于某朝国祚的数字会自动标注朝代：' + spanLabel(289) + ' → ' + (CUR_YEARS / 289 * 100).toFixed(1) +
+      '%，' + spanLabel(97) + ' → ' + (CUR_YEARS / 97 * 100).toFixed(1) + '%</div>';
 
   // ---- 主区：数值=拉链图 / 百分比=同阶段大事清单 ----
   var html = '<div class="chart-head">' +
@@ -233,14 +224,14 @@ function render() {
 
   // ---- 事件 ----
   document.getElementById('anchorRow').addEventListener('click', function () {
-    var idx = 0;
-    for (var i = 0; i < WHEEL.length; i++) if (WHEEL[i].label === state.anchorLabel) { idx = i; break; }
-    WheelUI.open('参照时长',
-      [{ items: WHEEL.map(function (w) { return w.label; }), index: idx }],
-      function (sel) { state.anchorLabel = WHEEL[sel[0]].label; render(); },
+    var items = [];
+    for (var v = SPAN_MIN; v <= SPAN_MAX; v++) items.push(spanLabel(v));
+    WheelUI.open('假设国祚',
+      [{ items: items, index: state.anchorSpan - SPAN_MIN }],
+      function (sel) { state.anchorSpan = SPAN_MIN + sel[0]; render(); },
       function (sel) {
         var el = document.querySelector('#anchorRow .value');
-        if (el) el.innerHTML = WHEEL[sel[0]].label + '<span class="chevron">›</span>';
+        if (el) el.innerHTML = spanLabel(SPAN_MIN + sel[0]) + '<span class="chevron">›</span>';
       }, render);
   });
   document.getElementById('preQinSwitch').addEventListener('change', function (e) {
